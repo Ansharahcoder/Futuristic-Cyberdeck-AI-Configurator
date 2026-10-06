@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS-9 QUANTUM CYBERDECK | Elite AI Configurator</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            bg: '#030712',
+                            card: '#0b0f19',
+                            cyan: '#06b6d4',
+                            magenta: '#d946ef',
+                            gold: '#f59e0b',
+                            neon: '#10b981'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Space Grotesk', 'Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Space+Grotesk:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Three.js & OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <style>
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: #030712;
+            color: #f3f4f6;
+            overflow-x: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(11, 15, 25, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+        }
+
+        .glass-panel-glow {
+            border: 1px solid rgba(6, 182, 212, 0.25);
+            box-shadow: 0 0 25px rgba(6, 182, 212, 0.15);
+        }
+
+        .neon-text-cyan {
+            text-shadow: 0 0 12px rgba(6, 182, 212, 0.7);
+        }
+
+        .neon-border-active {
+            border-color: #06b6d4 !important;
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(3, 7, 18, 0.8);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(6, 182, 212, 0.4);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(6, 182, 212, 0.8);
+        }
+
+        /* Pulse Animations */
+        @keyframes cyberPulse {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        .animate-cyber-pulse {
+            animation: cyberPulse 3s infinite ease-in-out;
+        }
+
+        /* Scanner Line Animation */
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(1000%); }
+        }
+        .scanline-effect::after {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, transparent, rgba(6, 182, 212, 0.8), transparent);
+            animation: scanline 8s linear infinite;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-cyber-bg text-slate-100 min-h-screen relative selection:bg-cyan-500 selection:text-black">
+
+    <canvas id="bg-grid-canvas" class="fixed inset-0 pointer-events-none z-0 opacity-40"></canvas>
+
+    <!-- Navigation Header -->
+    <header class="sticky top-0 z-40 glass-panel border-b border-slate-800/80 px-4 sm:px-8 py-3.5 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-fuchsia-600 p-0.5 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                <div class="w-full h-full bg-cyber-bg rounded-[10px] flex items-center justify-center">
+                    <i class="fa-solid fa-microchip text-cyan-400 text-lg"></i>
+                </div>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="font-black tracking-wider text-lg sm:text-xl text-white">NEXUS<span class="text-cyan-400 font-light">-9</span></h1>
+                    <span class="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">QUANTUM v4.8</span>
+                </div>
+                <p class="text-[11px] text-slate-400 tracking-widest uppercase">Next-Gen Cyberdeck Configurator</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3 sm:gap-6">
+            <!-- Audio FX Toggle Button -->
+            <button id="audio-toggle-btn" class="px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700 hover:border-cyan-500 text-xs text-slate-300 flex items-center gap-2 transition">
+                <i id="audio-icon" class="fa-solid fa-volume-xmark text-slate-400"></i>
+                <span class="hidden sm:inline font-mono">SYNTH AUDIO</span>
+            </button>
+
+            <!-- Price Badge -->
+            <div class="text-right">
+                <p class="text-[10px] uppercase text-slate-400 font-mono tracking-wider">Total Build</p>
+                <p id="header-price-display" class="font-mono text-lg sm:text-xl font-bold text-cyan-400 neon-text-cyan">$4,850</p>
+            </div>
+
+            <!-- Open Drawer Button -->
+            <button id="open-cart-btn" class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold rounded-xl shadow-lg shadow-cyan-500/25 transition flex items-center gap-2 text-sm">
+                <i class="fa-solid fa-cart-shopping"></i>
+                <span class="hidden sm:inline">DEPLOY SPEC</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="relative z-10 max-w-[1800px] mx-auto p-3 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- LEFT COLUMN: 3D Visualizer Viewport & Telemetry (7 Cols) -->
+        <section class="lg:col-span-7 flex flex-col gap-4">
+            <!-- 3D Canvas Box -->
+            <div class="relative glass-panel glass-panel-glow rounded-3xl overflow-hidden h-[450px] sm:h-[580px] flex flex-col scanline-effect">
+                
+                <!-- 3D Canvas -->
+                <div id="three-container" class="w-full h-full cursor-grab active:cursor-grabbing relative"></div>
+
+                <!-- 3D Controls Floating Bar -->
+                <div class="absolute top-4 left-4 right-4 flex justify-between items-center pointer-events-none">
+                    <!-- Status Badge -->
+                    <div class="pointer-events-auto flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-cyan-500/30 text-xs font-mono">
+                        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                        <span class="text-slate-300">SYSTEM: ONLINE</span>
+                    </div>
+
+                    <!-- Exploded View Toggle -->
+                    <div class="pointer-events-auto flex items-center gap-2">
+                        <button id="exploded-toggle-btn" class="px-3 py-1.5 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-700 hover:border-cyan-400 text-xs font-mono text-slate-200 transition flex items-center gap-2">
+                            <i class="fa-solid fa-cubes text-cyan-400"></i>
+                            <span>EXPLODED VIEW</span>
+                        </button>
+                        <button id="reset-cam-btn" class="p-2 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-700 hover:border-cyan-400 text-xs text-slate-300 transition" title="Reset View">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Floating Hotspots Indicator Overlays -->
+                <div id="hotspot-chip" class="absolute top-1/2 left-1/2 -translate-x-12 -translate-y-8 pointer-events-auto cursor-pointer group">
+                    <div class="relative flex items-center justify-center">
+                        <span class="absolute w-6 h-6 rounded-full bg-cyan-400/40 animate-ping"></span>
+                        <span class="w-3 h-3 rounded-full bg-cyan-400 border-2 border-white shadow-lg"></span>
+                    </div>
+                    <!-- Tooltip -->
+                    <div class="absolute bottom-full left-1/2 -translate-x-12 mb-2 hidden group-hover:block w-48 p-2.5 rounded-xl glass-panel text-[11px] border border-cyan-500/40 shadow-2xl z-30">
+                        <p class="font-bold text-cyan-400">Quantum Neural Processing Core</p>
+                        <p class="text-slate-300 text-[10px] mt-0.5">3.8 PetaFLOPS Matrix Architecture with Sub-Zero Liquid Nitrogen Loop.</p>
+                    </div>
+                </div>
+
+                <!-- Color Selector Theme Dock -->
+                <div class="absolute bottom-4 left-1/2 -translate-x-12 sm:translate-x-0 sm:left-4 right-4 flex flex-wrap justify-between items-center gap-3 pointer-events-none">
+                    <div class="pointer-events-auto flex items-center gap-2 p-1.5 rounded-2xl bg-slate-900/90 backdrop-blur-md border border-slate-800">
+                        <span class="text-[10px] font-mono text-slate-400 px-2 uppercase">Theme Palette</span>
+                        <button data-color="cyber" class="color-btn w-6 h-6 rounded-full bg-cyan-500 border-2 border-white shadow-md transition transform hover:scale-110" title="Cyber Neon"></button>
+                        <button data-color="obsidian" class="color-btn w-6 h-6 rounded-full bg-amber-500 border-2 border-transparent transition transform hover:scale-110" title="Obsidian Gold"></button>
+                        <button data-color="plasma" class="color-btn w-6 h-6 rounded-full bg-fuchsia-500 border-2 border-transparent transition transform hover:scale-110" title="Plasma Violet"></button>
+                        <button data-color="arctic" class="color-btn w-6 h-6 rounded-full bg-emerald-400 border-2 border-transparent transition transform hover:scale-110" title="Arctic Cyan"></button>
+                    </div>
+
+                    <div class="pointer-events-auto text-[11px] font-mono text-slate-400 bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-800">
+                        <i class="fa-solid fa-hand-pointer text-cyan-400 mr-1.5"></i> Drag to Orbit | Scroll to Zoom
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-3xl p-5 border border-slate-800/80 space-y-3">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-cyan-400"></i>
+                        <h3 class="font-bold text-sm text-slate-200 uppercase tracking-wider">Live System Telemetry & Benchmarks</h3>
+                    </div>
+                    <span class="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">60.0 FPS / STABLE</span>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="p-3 rounded-2xl bg-slate-900/60 border border-slate-800">
+                        <p class="text-[10px] font-mono text-slate-400 uppercase">Compute Power</p>
+                        <p id="metric-tflops" class="text-lg font-mono font-bold text-cyan-400 mt-1">1,250 TFLOPS</p>
+                    </div>
+                    <div class="p-3 rounded-2xl bg-slate-900/60 border border-slate-800">
+                        <p class="text-[10px] font-mono text-slate-400 uppercase">Neural Speed</p>
+                        <p id="metric-speed" class="text-lg font-mono font-bold text-fuchsia-400 mt-1">850 GB/s</p>
+                    </div>
+                    <div class="p-3 rounded-2xl bg-slate-900/60 border border-slate-800">
+                        <p class="text-[10px] font-mono text-slate-400 uppercase">Thermal Efficiency</p>
+                        <p id="metric-thermal" class="text-lg font-mono font-bold text-emerald-400 mt-1">98.4 %</p>
+                    </div>
+                    <div class="p-3 rounded-2xl bg-slate-900/60 border border-slate-800">
+                        <p class="text-[10px] font-mono text-slate-400 uppercase">Battery Life</p>
+                        <p id="metric-battery" class="text-lg font-mono font-bold text-amber-400 mt-1">18.5 Hrs</p>
+                    </div>
+                </div>
+
+                <!-- Animated Canvas Chart -->
+                <div class="relative h-20 w-full overflow-hidden rounded-xl bg-slate-950/80 border border-slate-800/80 pt-1">
+                    <canvas id="telemetry-chart-canvas" class="w-full h-full"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- RIGHT COLUMN: Hardware Configurator & AURA-AI Terminal (5 Cols) -->
+        <section class="lg:col-span-5 flex flex-col gap-6">
+
+            <!-- Hardware Spec Configurator Panel -->
+            <div class="glass-panel rounded-3xl p-5 sm:p-6 space-y-6 border border-slate-800">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-sliders text-cyan-400"></i> Hardware Matrix
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-0.5">Customize quantum architecture and specs</p>
+                    </div>
+                    <span id="build-tag" class="text-[11px] font-mono text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-lg border border-cyan-500/30">CUSTOM SPEC</span>
+                </div>
+
+                <!-- Spec Group 1: Processor -->
+                <div class="space-y-2">
+                    <label class="text-xs font-mono text-slate-300 uppercase tracking-wider flex justify-between">
+                        <span>1. Core Processor</span>
+                        <span class="text-cyan-400" id="cpu-price-label">+$0</span>
+                    </label>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <button data-type="cpu" data-value="quantum-i7" data-price="0" data-tflops="1250" class="spec-opt-btn p-3 rounded-2xl bg-slate-900/80 border neon-border-active text-left transition relative">
+                            <p class="font-bold text-xs text-white">Quantum X7-Core</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">128 Qubits | 4.8 GHz</p>
+                        </button>
+                        <button data-type="cpu" data-value="quantum-i9" data-price="850" data-tflops="2400" class="spec-opt-btn p-3 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 text-left transition relative">
+                            <p class="font-bold text-xs text-white">Neural X9-Extreme</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">512 Qubits | 6.2 GHz</p>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Spec Group 2: GPU/AI Matrix -->
+                <div class="space-y-2">
+                    <label class="text-xs font-mono text-slate-300 uppercase tracking-wider flex justify-between">
+                        <span>2. Neural Graphics Array</span>
+                        <span class="text-cyan-400" id="gpu-price-label">+$0</span>
+                    </label>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <button data-type="gpu" data-value="rtx-matrix" data-price="0" data-speed="850" class="spec-opt-btn p-3 rounded-2xl bg-slate-900/80 border neon-border-active text-left transition">
+                            <p class="font-bold text-xs text-white">Hologram RTX-9000</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">24GB GDDR7 | RayTraced</p>
+                        </button>
+                        <button data-type="gpu" data-value="tensor-quantum" data-price="1200" data-speed="1650" class="spec-opt-btn p-3 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 text-left transition">
+                            <p class="font-bold text-xs text-white">Tensor Core Titan Q</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">64GB HBM3e | AI Matrix</p>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Spec Group 3: Memory / Storage -->
+                <div class="space-y-2">
+                    <label class="text-xs font-mono text-slate-300 uppercase tracking-wider flex justify-between">
+                        <span>3. Quantum RAM & Storage</span>
+                        <span class="text-cyan-400" id="ram-price-label">+$0</span>
+                    </label>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <button data-type="ram" data-value="64gb" data-price="0" class="spec-opt-btn p-3 rounded-2xl bg-slate-900/80 border neon-border-active text-left transition">
+                            <p class="font-bold text-xs text-white">64GB Molecular RAM</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">2TB Optical NVMe</p>
+                        </button>
+                        <button data-type="ram" data-value="256gb" data-price="600" class="spec-opt-btn p-3 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 text-left transition">
+                            <p class="font-bold text-xs text-white">256GB Crystal RAM</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">8TB Optical NVMe</p>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Spec Group 4: Chassis Upgrade -->
+                <div class="space-y-2">
+                    <label class="text-xs font-mono text-slate-300 uppercase tracking-wider flex justify-between">
+                        <span>4. Frame Coating & Cooling</span>
+                        <span class="text-cyan-400" id="cooling-price-label">+$0</span>
+                    </label>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <button data-type="cooling" data-value="liquid" data-price="0" class="spec-opt-btn p-3 rounded-2xl bg-slate-900/80 border neon-border-active text-left transition">
+                            <p class="font-bold text-xs text-white">Cryo-Liquid V2</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">Standard Thermal Gel</p>
+                        </button>
+                        <button data-type="cooling" data-value="subzero" data-price="450" class="spec-opt-btn p-3 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 text-left transition">
+                            <p class="font-bold text-xs text-white">Sub-Zero Nitrogen Loop</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">+15% Thermal Capacity</p>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-3xl p-5 border border-slate-800 space-y-3 flex flex-col h-[320px]">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></div>
+                        <h3 class="font-bold text-xs font-mono uppercase text-slate-200">AURA AI Systems Advisor</h3>
+                    </div>
+                    <div class="flex gap-1">
+                        <button data-preset="ai" class="preset-btn text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 hover:bg-cyan-500/20 hover:text-cyan-400 transition text-slate-300">AI Presets</button>
+                        <button data-preset="cyber" class="preset-btn text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 hover:bg-fuchsia-500/20 hover:text-fuchsia-400 transition text-slate-300">Cyber Warfare</button>
+                    </div>
+                </div>
+
+                <!-- Chat Scroll Terminal -->
+                <div id="ai-chat-box" class="flex-1 overflow-y-auto space-y-3 pr-2 text-xs font-mono">
+                    <div class="bg-slate-900/80 p-3 rounded-2xl border border-slate-800/80 text-slate-300">
+                        <span class="text-cyan-400 font-bold">[AURA-AI]:</span> Greetings Operator. I am initialized. Ask me about custom loadouts, benchmark specs, or request a dynamic discount code.
+                    </div>
+                </div>
+
+                <!-- Chat Input Box -->
+                <form id="ai-chat-form" class="flex items-center gap-2 pt-1">
+                    <input type="text" id="ai-input" placeholder="Ask AURA AI or request loadout advice..." 
+                        class="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-cyan-500/60 font-mono placeholder:text-slate-600">
+                    <button type="submit" class="p-2.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl transition">
+                        <i class="fa-solid fa-paper-plane text-xs"></i>
+                    </button>
+                </form>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Slide-Out Order Drawer -->
+    <div id="cart-drawer" class="fixed inset-y-0 right-0 z-50 w-full max-w-md glass-panel border-l border-slate-800 shadow-2xl translate-x-full transition-transform duration-300 p-6 flex flex-col justify-between">
+        <div>
+            <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-box-open text-cyan-400"></i>
+                    <h2 class="font-bold text-lg text-white">System Deploy Manifest</h2>
+                </div>
+                <button id="close-cart-btn" class="p-2 text-slate-400 hover:text-white text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Breakdown List -->
+            <div class="mt-6 space-y-4">
+                <div class="space-y-2">
+                    <h4 class="text-xs font-mono text-slate-400 uppercase">Configured Chassis</h4>
+                    <div class="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 flex justify-between items-center">
+                        <div>
+                            <p class="font-bold text-xs text-white">NEXUS-9 Quantum Base</p>
+                            <p class="text-[10px] text-slate-400">Carbon Fiber-Titanium Frame</p>
+                        </div>
+                        <span class="font-mono text-xs text-slate-300">$4,850</span>
+                    </div>
+                </div>
+
+                <div id="drawer-upgrades-list" class="space-y-2">
+                    <!-- Dynamic upgrades inserted via JS -->
+                </div>
+
+                <div class="p-3 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex justify-between items-center">
+                    <span class="text-xs font-mono text-cyan-400">Quantum Express Shipping</span>
+                    <span class="text-xs font-mono text-cyan-400">INCLUDED</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-4 border-t border-slate-800 pt-4">
+            <div class="flex justify-between items-end">
+                <div>
+                    <p class="text-xs font-mono text-slate-400">Total Investment</p>
+                    <p id="drawer-total-price" class="text-2xl font-mono font-bold text-cyan-400 neon-text-cyan">$4,850</p>
+                </div>
+                <button id="export-spec-btn" class="text-xs text-slate-400 hover:text-cyan-400 underline font-mono">Export Spec Sheet PDF</button>
+            </div>
+
+            <button id="checkout-btn" class="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold rounded-2xl shadow-lg shadow-cyan-500/30 transition text-sm flex items-center justify-center gap-2">
+                <i class="fa-solid fa-lock"></i>
+                <span>INITIALIZE PURCHASE</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Checkout Modal Steps -->
+    <div id="checkout-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="glass-panel glass-panel-glow max-w-lg w-full rounded-3xl p-6 space-y-6 border border-cyan-500/30 relative animate-cyber-pulse">
+            <button id="close-modal-btn" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+
+            <div class="text-center space-y-2">
+                <div class="w-12 h-12 rounded-2xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 flex items-center justify-center mx-auto text-xl">
+                    <i class="fa-solid fa-satellite-dish"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white">Deploying NEXUS-9 Spec</h3>
+                <p class="text-xs text-slate-400">Transmitting encrypted specification order to orbital fabricator...</p>
+            </div>
+
+            <!-- Progress Step Visualizer -->
+            <div class="space-y-3 font-mono text-xs">
+                <div id="step-1" class="flex items-center gap-3 p-3 rounded-xl bg-slate-900 border border-cyan-500/40 text-cyan-400">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>1. Encrypting Quantum Signature...</span>
+                </div>
+                <div id="step-2" class="flex items-center gap-3 p-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-500">
+                    <i class="fa-solid fa-spinner animate-spin hidden"></i>
+                    <span>2. Allocating Qubit Silicon Wafers...</span>
+                </div>
+                <div id="step-3" class="flex items-center gap-3 p-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-500">
+                    <i class="fa-solid fa-circle-notch hidden"></i>
+                    <span>3. Dispatching Express Courier...</span>
+                </div>
+            </div>
+
+            <button id="finish-checkout-btn" disabled class="w-full py-3 bg-slate-800 text-slate-500 font-bold rounded-xl transition text-xs">
+                PROCESSING ORDER...
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- Web Audio API Synth Generator ---
+        let audioCtx = null;
+        let isAudioMuted = true;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSynthBeep(freq = 440, type = 'sine', duration = 0.08) {
+            if (isAudioMuted || !audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {}
+        }
+
+        document.getElementById('audio-toggle-btn').addEventListener('click', () => {
+            initAudio();
+            isAudioMuted = !isAudioMuted;
+            const icon = document.getElementById('audio-icon');
+            if (isAudioMuted) {
+                icon.className = 'fa-solid fa-volume-xmark text-slate-400';
+            } else {
+                icon.className = 'fa-solid fa-volume-high text-cyan-400';
+                playSynthBeep(880, 'triangle', 0.15);
+            }
+        });
+
+        // --- Configurator State ---
+        const configState = {
+            basePrice: 4850,
+            cpuPrice: 0,
+            gpuPrice: 0,
+            ramPrice: 0,
+            coolingPrice: 0,
+            colorTheme: 'cyber',
+            isExploded: false
+        };
+
+        const themeColors = {
+            cyber: { main: 0x06b6d4, accent: 0x3b82f6, glow: '#06b6d4' },
+            obsidian: { main: 0xf59e0b, accent: 0xd97706, glow: '#f59e0b' },
+            plasma: { main: 0xd946ef, accent: 0x8b5cf6, glow: '#d946ef' },
+            arctic: { main: 0x10b981, accent: 0x06b6d4, glow: '#10b981' }
+        };
+
+        // --- Three.js 3D Cyberdeck Model Generation ---
+        let scene, camera, renderer, controls;
+        let chassisGroup, topScreenMesh, bottomBaseMesh, quantumCoreMesh, coolingPipesMesh;
+
+        function initThreeJS() {
+            const container = document.getElementById('three-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x030712, 0.12);
+
+            camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+            camera.position.set(0, 3, 7);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 + 0.1;
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            dirLight.position.set(5, 10, 7);
+            scene.add(dirLight);
+
+            const pointLight = new THREE.PointLight(0x06b6d4, 2, 10);
+            pointLight.position.set(0, 2, 0);
+            scene.add(pointLight);
+
+            // Construct Modular Procedural Cyberdeck Model
+            chassisGroup = new THREE.Group();
+
+            // 1. Bottom Base Chassis
+            const baseGeo = new THREE.BoxGeometry(3.2, 0.25, 2.2);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.3, metalness: 0.8 });
+            bottomBaseMesh = new THREE.Mesh(baseGeo, baseMat);
+            bottomBaseMesh.position.y = 0;
+            chassisGroup.add(bottomBaseMesh);
+
+            // 2. Quantum Core Chip inside Base
+            const coreGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.15, 16);
+            const coreMat = new THREE.MeshStandardMaterial({ color: 0x06b6d4, emissive: 0x06b6d4, emissiveIntensity: 0.8 });
+            quantumCoreMesh = new THREE.Mesh(coreGeo, coreMat);
+            quantumCoreMesh.position.set(0, 0.1, 0);
+            chassisGroup.add(quantumCoreMesh);
+
+            // 3. Liquid Cooling Tubes
+            const pipeGeo = new THREE.TorusGeometry(0.8, 0.04, 8, 24);
+            const pipeMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, metalness: 0.9, roughness: 0.1 });
+            coolingPipesMesh = new THREE.Mesh(pipeGeo, pipeMat);
+            coolingPipesMesh.rotation.x = Math.PI / 2;
+            coolingPipesMesh.position.set(0, 0.12, 0);
+            chassisGroup.add(coolingPipesMesh);
+
+            // 4. Top Holographic Screen Mesh
+            const screenGeo = new THREE.BoxGeometry(3.2, 0.1, 2.2);
+            const screenMat = new THREE.MeshStandardMaterial({ color: 0x030712, roughness: 0.2 });
+            topScreenMesh = new THREE.Mesh(screenGeo, screenMat);
+            topScreenMesh.position.set(0, 1.1, -1.0);
+            topScreenMesh.rotation.x = Math.PI / 3; // Opened Screen Angle
+            chassisGroup.add(topScreenMesh);
+
+            // Glowing Screen Display Plane
+            const displayGeo = new THREE.PlaneGeometry(3.0, 2.0);
+            const displayMat = new THREE.MeshBasicMaterial({ color: 0x06b6d4, side: THREE.DoubleSide });
+            const displayMesh = new THREE.Mesh(displayGeo, displayMat);
+            displayMesh.position.set(0, 0.06, 0);
+            displayMesh.rotation.x = -Math.PI / 2;
+            topScreenMesh.add(displayMesh);
+
+            scene.add(chassisGroup);
+
+            // Animation Loop
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+
+                // Gentle ambient rotation
+                if (!controls.state == -1) {
+                    chassisGroup.rotation.y += 0.002;
+                }
+
+                // Core Pulse Effect
+                const time = Date.now() * 0.003;
+                quantumCoreMesh.material.emissiveIntensity = 0.5 + Math.sin(time) * 0.3;
+
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            // Resize Handler
+            window.addEventListener('resize', () => {
+                const w = container.clientWidth;
+                const h = container.clientHeight;
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+                renderer.setSize(w, h);
+            });
+        }
+
+        // --- Exploded View Animation Toggle ---
+        document.getElementById('exploded-toggle-btn').addEventListener('click', () => {
+            playSynthBeep(600, 'square');
+            configState.isExploded = !configState.isExploded;
+
+            const targetTopY = configState.isExploded ? 2.8 : 1.1;
+            const targetCoreY = configState.isExploded ? 1.2 : 0.1;
+            const targetPipeY = configState.isExploded ? 1.8 : 0.12;
+
+            // Simple Interpolation
+            let progress = 0;
+            const startTopY = topScreenMesh.position.y;
+            const startCoreY = quantumCoreMesh.position.y;
+            const startPipeY = coolingPipesMesh.position.y;
+
+            function animateExplode() {
+                progress += 0.05;
+                topScreenMesh.position.y = THREE.MathUtils.lerp(startTopY, targetTopY, progress);
+                quantumCoreMesh.position.y = THREE.MathUtils.lerp(startCoreY, targetCoreY, progress);
+                coolingPipesMesh.position.y = THREE.MathUtils.lerp(startPipeY, targetPipeY, progress);
+
+                if (progress < 1) requestAnimationFrame(animateExplode);
+            }
+            animateExplode();
+        });
+
+        document.getElementById('reset-cam-btn').addEventListener('click', () => {
+            playSynthBeep(440, 'sine');
+            camera.position.set(0, 3, 7);
+            controls.reset();
+        });
+
+        // --- Color Theme Switcher ---
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const themeKey = e.target.dataset.color;
+                playSynthBeep(700, 'sine');
+
+                document.querySelectorAll('.color-btn').forEach(b => b.classList.replace('border-white', 'border-transparent'));
+                e.target.classList.replace('border-transparent', 'border-white');
+
+                const theme = themeColors[themeKey];
+                quantumCoreMesh.material.color.setHex(theme.main);
+                quantumCoreMesh.material.emissive.setHex(theme.main);
+                coolingPipesMesh.material.color.setHex(theme.accent);
+            });
+        });
+
+        // Update Price & Stats Calculations
+        function updateCalculations() {
+            const totalPrice = configState.basePrice + configState.cpuPrice + configState.gpuPrice + configState.ramPrice + configState.coolingPrice;
+            document.getElementById('header-price-display').textContent = `$${totalPrice.toLocaleString()}`;
+            document.getElementById('drawer-total-price').textContent = `$${totalPrice.toLocaleString()}`;
+
+            // Update Drawer Upgrades List
+            const drawerList = document.getElementById('drawer-upgrades-list');
+            drawerList.innerHTML = '';
+
+            const selectedBtns = document.querySelectorAll('.spec-opt-btn.neon-border-active');
+            selectedBtns.forEach(btn => {
+                const price = parseInt(btn.dataset.price);
+                if (price > 0) {
+                    const title = btn.querySelector('.font-bold').textContent;
+                    const item = document.createElement('div');
+                    item.className = 'p-3 rounded-2xl bg-slate-900/80 border border-slate-800 flex justify-between items-center';
+                    item.innerHTML = `
+                        <div>
+                            <p class="font-bold text-xs text-white">${title}</p>
+                            <p class="text-[10px] text-slate-400">Upgrade Component</p>
+                        </div>
+                        <span class="font-mono text-xs text-cyan-400">+$${price}</span>
+                    `;
+                    drawerList.appendChild(item);
+                }
+            });
+        }
+
+        // Spec Selection Listeners
+        document.querySelectorAll('.spec-opt-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                playSynthBeep(520, 'sine');
+                const card = e.currentTarget;
+                const type = card.dataset.type;
+                const price = parseInt(card.dataset.price);
+
+                // Clear siblings active border
+                card.parentElement.querySelectorAll('.spec-opt-btn').forEach(b => {
+                    b.classList.remove('neon-border-active');
+                    b.classList.add('border-slate-800');
+                });
+
+                card.classList.add('neon-border-active');
+                card.classList.remove('border-slate-800');
+
+                // Update State
+                if (type === 'cpu') {
+                    configState.cpuPrice = price;
+                    document.getElementById('cpu-price-label').textContent = price > 0 ? `+$${price}` : '+$0';
+                    if (card.dataset.tflops) document.getElementById('metric-tflops').textContent = `${parseInt(card.dataset.tflops).toLocaleString()} TFLOPS`;
+                } else if (type === 'gpu') {
+                    configState.gpuPrice = price;
+                    document.getElementById('gpu-price-label').textContent = price > 0 ? `+$${price}` : '+$0';
+                    if (card.dataset.speed) document.getElementById('metric-speed').textContent = `${card.dataset.speed} GB/s`;
+                } else if (type === 'ram') {
+                    configState.ramPrice = price;
+                    document.getElementById('ram-price-label').textContent = price > 0 ? `+$${price}` : '+$0';
+                } else if (type === 'cooling') {
+                    configState.coolingPrice = price;
+                    document.getElementById('cooling-price-label').textContent = price > 0 ? `+$${price}` : '+$0';
+                }
+
+                updateCalculations();
+            });
+        });
+
+        // --- Live Waveform Telemetry Chart Canvas ---
+        function initTelemetryChart() {
+            const canvas = document.getElementById('telemetry-chart-canvas');
+            const ctx = canvas.getContext('2d');
+            let step = 0;
+
+            function resizeCanvas() {
+                canvas.width = canvas.parentElement.clientWidth;
+                canvas.height = canvas.parentElement.clientHeight;
+            }
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            function drawWave() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.beginPath();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#06b6d4';
+
+                const height = canvas.height;
+                const width = canvas.width;
+
+                for (let x = 0; x < width; x += 5) {
+                    const y = height / 2 + Math.sin((x + step) * 0.03) * 15 + (Math.random() - 0.5) * 4;
+                    if (x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+
+                step += 2;
+                requestAnimationFrame(drawWave);
+            }
+            drawWave();
+        }
+
+        const aiChatBox = document.getElementById('ai-chat-box');
+        const aiForm = document.getElementById('ai-chat-form');
+        const aiInput = document.getElementById('ai-input');
+
+        function appendMessage(sender, text) {
+            const msg = document.createElement('div');
+            msg.className = sender === 'AI' ? 
+                'bg-slate-900/80 p-3 rounded-2xl border border-slate-800/80 text-slate-300' : 
+                'bg-cyan-500/10 p-3 rounded-2xl border border-cyan-500/30 text-cyan-200 text-right';
+            
+            msg.innerHTML = `<span class="font-bold ${sender === 'AI' ? 'text-cyan-400' : 'text-fuchsia-400'}">[${sender}]:</span> ${text}`;
+            aiChatBox.appendChild(msg);
+            aiChatBox.scrollTop = aiChatBox.scrollHeight;
+        }
+
+        aiForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = aiInput.value.trim();
+            if (!text) return;
+
+            playSynthBeep(800, 'triangle');
+            appendMessage('USER', text);
+            aiInput.value = '';
+
+            setTimeout(() => {
+                let reply = "Analyzing system topology... The NEXUS-9 architecture handles high-density parallel quantum workloads effortlessly.";
+                const lower = text.toLowerCase();
+
+                if (lower.includes('discount') || lower.includes('promo') || lower.includes('price')) {
+                    reply = "Special voucher code 'NEXUS-2026' applied! Your order manifest includes priority orbital shipping.";
+                } else if (lower.includes('ai') || lower.includes('preset') || lower.includes('recommend')) {
+                    reply = "For heavy LLM & Neural training, I recommend upgrading to the Tensor Core Titan Q GPU & Sub-Zero Nitrogen Loop.";
+                }
+
+                appendMessage('AI', reply);
+                playSynthBeep(400, 'sine');
+            }, 600);
+        });
+
+        // Preset Button Shortcuts
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const mode = e.target.dataset.preset;
+                playSynthBeep(750, 'square');
+                if (mode === 'ai') {
+                    appendMessage('AI', 'Loading "AI Deep Learning Preset": Auto-selected Tensor Core Titan Q and 256GB Crystal RAM.');
+                } else {
+                    appendMessage('AI', 'Loading "Cyber Warfare Preset": Maximum Neural X9-Extreme CPU clock with Sub-Zero Cooling engaged.');
+                }
+            });
+        });
+
+        const cartDrawer = document.getElementById('cart-drawer');
+        const checkoutModal = document.getElementById('checkout-modal');
+
+        document.getElementById('open-cart-btn').addEventListener('click', () => {
+            playSynthBeep(650, 'sine');
+            cartDrawer.classList.remove('translate-x-full');
+        });
+
+        document.getElementById('close-cart-btn').addEventListener('click', () => {
+            playSynthBeep(350, 'sine');
+            cartDrawer.classList.add('translate-x-full');
+        });
+
+        document.getElementById('checkout-btn').addEventListener('click', () => {
+            playSynthBeep(900, 'triangle');
+            cartDrawer.classList.add('translate-x-full');
+            checkoutModal.classList.remove('hidden');
+
+            // Simulate checkout steps progress
+            setTimeout(() => {
+                document.getElementById('step-2').className = 'flex items-center gap-3 p-3 rounded-xl bg-slate-900 border border-cyan-500/40 text-cyan-400';
+            }, 1200);
+
+            setTimeout(() => {
+                document.getElementById('step-3').className = 'flex items-center gap-3 p-3 rounded-xl bg-slate-900 border border-cyan-500/40 text-cyan-400';
+                const finishBtn = document.getElementById('finish-checkout-btn');
+                finishBtn.disabled = false;
+                finishBtn.className = 'w-full py-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl transition text-xs shadow-lg shadow-cyan-500/30';
+                finishBtn.textContent = 'CONFIRM ORBITAL DEPLOYMENT';
+            }, 2400);
+        });
+
+        document.getElementById('close-modal-btn').addEventListener('click', () => {
+            checkoutModal.classList.add('hidden');
+        });
+
+        document.getElementById('finish-checkout-btn').addEventListener('click', () => {
+            playSynthBeep(1000, 'sine', 0.3);
+            alert('Order Transmitted! Your Quantum Cyberdeck deployment has been initiated.');
+            checkoutModal.classList.add('hidden');
+        });
+
+        document.getElementById('export-spec-btn').addEventListener('click', () => {
+            alert('Downloading NEXUS-9 Specification Sheet PDF...');
+        });
+
+        // --- Background Grid Animation Canvas ---
+        function initBgGrid() {
+            const canvas = document.getElementById('bg-grid-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            let offset = 0;
+            function drawGrid() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.strokeStyle = 'rgba(6, 182, 212, 0.05)';
+                ctx.lineWidth = 1;
+
+                const gridSize = 40;
+                for (let x = 0; x < canvas.width; x += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, canvas.height);
+                    ctx.stroke();
+                }
+                for (let y = offset % gridSize; y < canvas.height; y += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.stroke();
+                }
+
+                offset += 0.2;
+                requestAnimationFrame(drawGrid);
+            }
+            drawGrid();
+        }
+
+        // Initialize All Engines on Window Load
+        window.addEventListener('load', () => {
+            initThreeJS();
+            initTelemetryChart();
+            initBgGrid();
+            updateCalculations();
+        });
+    </script>
+</body>
+</html>
